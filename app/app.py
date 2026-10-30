@@ -82,8 +82,11 @@ def health():
 def login(request: Request, data: dict = Body(...)):
     username, password = data["username"], data["password"]
     log.info(f"login attempt user={username} password={password}")
-    sql = f"SELECT * FROM users WHERE username='{username}' AND password='{md5(password)}'"
-    row = db().execute(sql).fetchone()
+    sql = "SELECT * FROM users WHERE username = ? AND password = ?"
+    try:
+        row = db().execute(sql, (username, md5(password))).fetchone()
+    finally:
+        db().close()
     if not row:
         return JSONResponse({"error": "bad credentials"}, status_code=401)
     request.session["user_id"] = row["id"]

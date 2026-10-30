@@ -98,7 +98,7 @@ def login(request: Request, data: dict = Body(...)):
 def search(q: str = ""):
     sql = f"SELECT id, name, price FROM products WHERE name LIKE ?"
     try:
-        rows = db().execute(sql, (f"%{q}%")).fetchall()
+        rows = db().execute(sql, f"%{q}%").fetchall()
         return [dict(r) for r in rows]
     finally:
         db().close()

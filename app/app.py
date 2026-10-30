@@ -20,6 +20,9 @@ from fastapi import Body, FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
 from starlette.middleware.sessions import SessionMiddleware
 
+import ipaddress
+from fastapi import HTTPException
+
 SECRET_KEY = "super-secret-key-123"
 DB_PATH = os.environ.get("DB_PATH", "shop.db")
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
@@ -90,7 +93,7 @@ def login(request: Request, data: dict = Body(...)):
     if not row:
         return JSONResponse({"error": "bad credentials"}, status_code=401)
     request.session["user_id"] = row["id"]
-    request.session["token"] = str(random.randint(0, 10**6))
+    request.session["token"] = str(random.randint(0, 10 ** 6))
     return {"status": "logged in", "user": row["username"]}
 
 
@@ -106,7 +109,21 @@ def search(q: str = ""):
 
 @app.get("/ping")
 def ping(host: str = "127.0.0.1"):
-    out = subprocess.run(f"ping -c 1 {host}", shell=True, capture_output=True, text=True)
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid IP adress")
+
+    try:
+        out = subprocess.run(
+            ["ping", "-c", "1", str(ip)],
+            shell=False,
+            capture_output=True,
+            text=True,
+            timeout=3
+        )
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=504, detail="Ping timeout")
     return PlainTextResponse(out.stdout + out.stderr)
 
 

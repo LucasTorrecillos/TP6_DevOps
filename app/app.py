@@ -22,6 +22,8 @@ from starlette.middleware.sessions import SessionMiddleware
 
 import ipaddress
 from fastapi import HTTPException
+import ast
+import operator
 
 SECRET_KEY = "super-secret-key-123"
 DB_PATH = os.environ.get("DB_PATH", "shop.db")
@@ -137,9 +139,46 @@ def get_file(name: str):
     return FileResponse(os.path.join(UPLOAD_DIR, name))
 
 
+def safe_eval(expr):
+    operations = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.Div: operator.truediv
+    }
+
+    def evaluate(node, depth=0):
+        if depth > 12:
+            raise ValueError("Too complex expression")
+        if isinstance(node, ast.Constant) and type(node.value) in (int, float):
+            return node.value
+        if isinstance(node, ast.BinOp) and type(node.op) in operations:
+            left = evaluate(node.left, depth + 1)
+            right = evaluate(node.right, depth + 1)
+            return operations[type(node.op)](left, right)
+        if isinstance(node, ast.UnaryOp):
+            value = evaluate(node.operand, depth + 1)
+            if isinstance(node.op, ast.USub):
+                return -value
+            if isinstance(node.op, ast.UAdd):
+                return value
+        raise ValueError("Illegal expression")
+    if len(expr) > 100:
+        raise ValueError("Too long expression")
+    tree = ast.parse(expr, mode="eval")
+    result = evaluate(tree.body)
+    if abs(result) > 1_000_000_000:
+        raise ValueError("Too large result")
+    return result
+
+
 @app.post("/calc")
 def calc(data: dict = Body(...)):
-    return {"result": str(eval(data["expr"]))}
+    try:
+        result = safe_eval(data)
+        return {"result": str(result)}
+    except (ValueError, SyntaxError, ArithmeticError, KeyError, TypeError):
+        raise HTTPException(status_code=400, detail="Invalid expression")
 
 
 @app.post("/import-yaml")

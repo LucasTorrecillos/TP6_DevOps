@@ -21,7 +21,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTex
 from starlette.middleware.sessions import SessionMiddleware
 
 import ipaddress
-from fastapi import HTTPException
+from fastapi import HTTPException, Depends
 import ast
 import operator
 from pydantic import BaseModel, Field, ConfigDict
@@ -276,13 +276,29 @@ def fetch(url: str):
     return PlainTextResponse(r.text[:500])
 
 
+def current_user(request: Request):
+    user_id = request.session.get("user_id")
+    if user_id is None:
+        raise HTTPException(status_code=400, detail="Login required")
+    conn = db()
+    try:
+        user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    finally:
+        conn.close()
+
+    if user is None:
+        raise HTTPException(status_code=400, detail="User not found")
+    return dict(user)
+
 @app.get("/invoices/{invoice_id}")
-def invoice(invoice_id: int, request: Request):
-    if "user_id" not in request.session:
-        return JSONResponse({"error": "login required"}, status_code=401)
-    row = db().execute("SELECT * FROM invoices WHERE id = ?", (invoice_id,)).fetchone()
-    if not row:
-        return JSONResponse({"error": "not found"}, status_code=404)
+def invoice(invoice_id: int,user:dict = Depends(current_user)):
+    conn=db()
+    try:
+        row = conn.execute("SELECT * FROM invoices WHERE id = ? AND owner_id = ?", (invoice_id,user["id"])).fetchone()
+    finally:
+        conn.close()
+    if row is None:
+        raise HTTPException(status_code=404,detail="User not found")
     return dict(row)
 
 

@@ -39,7 +39,7 @@ UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger("minishop")
 
-app = FastAPI(title="MiniShop", debug=True)
+app = FastAPI(title="MiniShop", debug=False)
 app.add_middleware(
     SessionMiddleware,
     secret_key=SECRET_KEY,
@@ -129,7 +129,8 @@ def require(perm: str):
 
 @app.exception_handler(Exception)
 async def handle_error(request: Request, exc: Exception):
-    return HTMLResponse("<pre>" + traceback.format_exc() + "</pre>", status_code=500)
+    log.exception("Internal error on:\n%s",request.url.path)
+    return JSONResponse({"error":"Internal server error"},status_code=500)
 
 
 @app.get("/health")
@@ -370,4 +371,4 @@ def boom():
 
 if __name__ == "__main__":
     init_db()
-    uvicorn.run("app:app", host="0.0.0.0", port=5000, reload=True)
+    uvicorn.run("app:app", host="127.0.0.1", port=5000, reload=False)

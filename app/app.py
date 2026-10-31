@@ -26,6 +26,7 @@ import ast
 import operator
 from pydantic import BaseModel, Field, ConfigDict
 from pathlib import Path
+import html
 
 SECRET_KEY = "super-secret-key-123"
 DB_PATH = os.environ.get("DB_PATH", "shop.db")
@@ -135,7 +136,8 @@ def ping(host: str = "127.0.0.1"):
 
 @app.get("/hello")
 def hello(name: str = ""):
-    return HTMLResponse(f"<h1>Bonjour {name}</h1>")
+    safe_name = html.escape(name,quote=True)
+    return HTMLResponse(f"<h1>Bonjour {safe_name}</h1>")
 
 
 @app.get("/files/{name:path}")

@@ -3,34 +3,29 @@
 Ne jamais déployer ce code tel quel. Votre mission : le rendre conforme.
 Documentation interactive : http://localhost:5000/docs
 """
-import base64
+import ast
 import hashlib
+import html
+import ipaddress
 import logging
+import operator
 import os
-import pickle
-import random
 import sqlite3
 import subprocess
-import traceback
+from pathlib import Path
+from urllib.parse import urlsplit
 
 import requests
 import uvicorn
 import yaml
-from fastapi import Body, FastAPI, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
-from starlette.middleware.sessions import SessionMiddleware
-
-import ipaddress
-from fastapi import HTTPException, Depends
-import ast
-import operator
-from pydantic import BaseModel, Field, ConfigDict
-from pathlib import Path
-import html
-from urllib.parse import urlsplit
 from argon2 import PasswordHasher
-from argon2.low_level import Type
 from argon2.exceptions import VerificationError, InvalidHashError
+from argon2.low_level import Type
+from fastapi import Body, FastAPI, Request
+from fastapi import HTTPException, Depends
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
+from pydantic import BaseModel, Field, ConfigDict
+from starlette.middleware.sessions import SessionMiddleware
 
 SECRET_KEY = os.environ["SECRET_KEY"]
 IS_PRODUCTION = os.environ.get("APP_ENV", "development") == "production"

@@ -27,6 +27,7 @@ import operator
 from pydantic import BaseModel, Field, ConfigDict
 from pathlib import Path
 import html
+from urllib.parse import urlsplit
 
 SECRET_KEY = "super-secret-key-123"
 DB_PATH = os.environ.get("DB_PATH", "shop.db")
@@ -136,7 +137,7 @@ def ping(host: str = "127.0.0.1"):
 
 @app.get("/hello")
 def hello(name: str = ""):
-    safe_name = html.escape(name,quote=True)
+    safe_name = html.escape(name, quote=True)
     return HTMLResponse(f"<h1>Bonjour {safe_name}</h1>")
 
 
@@ -146,9 +147,9 @@ def get_file(name: str):
     file_path = (root / name).resolve()
 
     if not file_path.is_relative_to(root):
-        raise HTTPException(status_code=403,detail="Unauthorized access")
+        raise HTTPException(status_code=403, detail="Unauthorized access")
     if not file_path.is_file():
-        raise HTTPException(status_code=404,detail="File not found")
+        raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(file_path)
 
 
@@ -209,6 +210,7 @@ async def import_yaml(request: Request):
 class Profile(BaseModel):
     class Config:
         extra = "forbid"
+
     name: str = Field(..., min_length=1, max_length=126)
     age: int = Field(..., ge=0, le=150)
 
@@ -220,9 +222,37 @@ async def import_profile(profile: Profile):
     }
 
 
+ALLOWED_HOSTS = {
+    "host1.com",
+    "host2.fr"
+}
+
+
 @app.get("/fetch")
 def fetch(url: str):
-    r = requests.get(url, verify=False)
+    try:
+        parsed = urlsplit(url)
+        port = parsed.port
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid URL")
+    if parsed.scheme != "http":
+        raise HTTPException(status_code=400, detail="Invalid URL, HTTPS required")
+    if port not in (None, 443):
+        raise HTTPException(status_code=400, detail="Unauthorized port")
+    if parsed.username is not Nona or parsed.password is not None:
+        raise HTTPException(status_code=400, detail="Login required")
+    try:
+        r = requests.get(
+            url,
+            verify=True,
+            timeout=3,
+            allow_redirects=False
+        )
+        if 300 <= r.status_code <= 399:
+            raise HTTPException(status_code=r.status_code, detail="Unauthorized redirect")
+        r.raise_for_status()
+    except requests.RequestException:
+        raise HTTPException(status_code=502, detail="Request error")
     return PlainTextResponse(r.text[:500])
 
 

@@ -33,13 +33,20 @@ from argon2.low_level import Type
 from argon2.exceptions import VerificationError, InvalidHashError
 
 SECRET_KEY = os.environ["SECRET_KEY"]
+IS_PRODUCTION = os.environ.get("APP_ENV", "development") == "production"
 DB_PATH = os.environ.get("DB_PATH", "shop.db")
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger("minishop")
 
-app = FastAPI(title="MiniShop", debug=False)
+app = FastAPI(
+    title="MiniShop",
+    debug=False,
+    docs_url=None if IS_PRODUCTION else "/docs",
+    redoc_url=None if IS_PRODUCTION else "/redoc",
+    openapi_url=None if IS_PRODUCTION else "/openapi.json"
+)
 app.add_middleware(
     SessionMiddleware,
     secret_key=SECRET_KEY,
@@ -129,8 +136,8 @@ def require(perm: str):
 
 @app.exception_handler(Exception)
 async def handle_error(request: Request, exc: Exception):
-    log.exception("Internal error on:\n%s",request.url.path)
-    return JSONResponse({"error":"Internal server error"},status_code=500)
+    log.exception("Internal error on:\n%s", request.url.path)
+    return JSONResponse({"error": "Internal server error"}, status_code=500)
 
 
 @app.get("/health")

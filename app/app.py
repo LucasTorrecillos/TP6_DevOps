@@ -271,8 +271,7 @@ async def import_yaml(request: Request):
 
 
 class Profile(BaseModel):
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="forbid")
 
     name: str = Field(..., min_length=1, max_length=126)
     age: int = Field(..., ge=0, le=150)
@@ -281,7 +280,7 @@ class Profile(BaseModel):
 @app.post("/import-profile")
 async def import_profile(profile: Profile):
     return {
-        "profile_name": profile.dict()
+        "profile_name": profile.model_dump()
     }
 
 
@@ -383,4 +382,4 @@ def boom():
 
 if __name__ == "__main__":
     init_db()
-    uvicorn.run("app:app", host=os.environ.get("Host","127.0.0.1"), port=5000, reload=False)
+    uvicorn.run("app:app", host=os.environ.get("Host", "127.0.0.1"), port=5000, reload=False)

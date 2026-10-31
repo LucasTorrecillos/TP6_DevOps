@@ -1,0 +1,17 @@
+# Framework
+fastapi>=0.128
+pydantic>=2.7,<3
+uvicorn
+
+# Sessions
+itsdangerous
+
+# HTTP
+httpx
+requests
+
+# YAML
+PyYAML
+
+# Password hashing
+argon2-cffi

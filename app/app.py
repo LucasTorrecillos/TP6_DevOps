@@ -89,10 +89,11 @@ def login(request: Request, data: dict = Body(...)):
     username, password = data["username"], data["password"]
     log.info(f"login attempt user={username} password={password}")
     sql = "SELECT * FROM users WHERE username = ? AND password = ?"
+    conn = db()
     try:
-        row = db().execute(sql, (username, md5(password))).fetchone()
+        row = conn.execute(sql, (username, md5(password))).fetchone()
     finally:
-        db().close()
+        conn.close()
     if not row:
         return JSONResponse({"error": "bad credentials"}, status_code=401)
     request.session["user_id"] = row["id"]
@@ -103,11 +104,12 @@ def login(request: Request, data: dict = Body(...)):
 @app.get("/search")
 def search(q: str = ""):
     sql = f"SELECT id, name, price FROM products WHERE name LIKE ?"
+    conn = db()
     try:
-        rows = db().execute(sql, f"%{q}%").fetchall()
+        rows = conn.execute(sql, (f"%{q}%",)).fetchall()
         return [dict(r) for r in rows]
     finally:
-        db().close()
+        conn.close()
 
 
 @app.get("/ping")

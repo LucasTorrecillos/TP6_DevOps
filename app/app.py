@@ -24,6 +24,7 @@ import ipaddress
 from fastapi import HTTPException
 import ast
 import operator
+from pydantic import BaseModel, Field, ConfigDict
 
 SECRET_KEY = "super-secret-key-123"
 DB_PATH = os.environ.get("DB_PATH", "shop.db")
@@ -163,6 +164,7 @@ def safe_eval(expr):
             if isinstance(node.op, ast.UAdd):
                 return value
         raise ValueError("Illegal expression")
+
     if len(expr) > 100:
         raise ValueError("Too long expression")
     tree = ast.parse(expr, mode="eval")
@@ -187,15 +189,23 @@ async def import_yaml(request: Request):
         cfg = yaml.safe_load(await request.body())
     except yaml.YAMLError:
         raise HTTPException(status_code=400, detail="Invalid YAML")
-    if not isinstance(cfg,dict):
+    if not isinstance(cfg, dict):
         raise HTTPException(status_code=400, detail="Lack of YAML")
-    return {"keys":list(cfg.keys())}
+    return {"keys": list(cfg.keys())}
+
+
+class Profile(BaseModel):
+    class Config:
+        extra = "forbid"
+    name: str = Field(..., min_length=1, max_length=126)
+    age: int = Field(..., ge=0, le=150)
 
 
 @app.post("/import-profile")
-async def import_profile(request: Request):
-    profile = pickle.loads(base64.b64decode(await request.body()))
-    return {"profile": str(profile)}
+async def import_profile(profile: Profile):
+    return {
+        "profile_name": profile.dict()
+    }
 
 
 @app.get("/fetch")

@@ -61,6 +61,25 @@ def md5(value):
 ph = PasswordHasher(type=Type.ID)
 
 
+@app.middleware("http")
+async def security_header(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self';"
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "frame-ancestors 'none'"
+    )
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+
+    if request.url.scheme == "https":
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
+    return response
+
+
 def init_db():
     conn = db()
     conn.executescript(
@@ -98,12 +117,13 @@ ROLE_PERMISSIONS = {
 }
 
 
-def require(perm:str):
-    def check_perm(user:dict=Depends(current_user)):
-        role="admin" if user["is_admin"] else "user"
-        if perm not in ROLE_PERMISSIONS.get(role,set()):
-            raise HTTPException(status_code=403,detail="Permission denied")
+def require(perm: str):
+    def check_perm(user: dict = Depends(current_user)):
+        role = "admin" if user["is_admin"] else "user"
+        if perm not in ROLE_PERMISSIONS.get(role, set()):
+            raise HTTPException(status_code=403, detail="Permission denied")
         return user
+
     return check_perm
 
 
@@ -338,7 +358,7 @@ def delete_user(
         conn.commit()
         if result.rowcount == 0:
             raise HTTPException(status_code=404, detail="User not found")
-        return {"deleted":user_id}
+        return {"deleted": user_id}
     finally:
         conn.close()
 

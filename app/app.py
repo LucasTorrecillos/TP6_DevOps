@@ -259,7 +259,7 @@ def fetch(url: str):
         raise HTTPException(status_code=400, detail="Invalid URL, HTTPS required")
     if port not in (None, 443):
         raise HTTPException(status_code=400, detail="Unauthorized port")
-    if parsed.username is not Nona or parsed.password is not None:
+    if parsed.username is not None or parsed.password is not None:
         raise HTTPException(status_code=400, detail="Login required")
     try:
         r = requests.get(

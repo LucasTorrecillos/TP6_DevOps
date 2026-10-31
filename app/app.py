@@ -92,6 +92,21 @@ def init_db():
     conn.close()
 
 
+ROLE_PERMISSIONS = {
+    "user": set(),
+    "admin": {"user:list", "user:delete"}
+}
+
+
+def require(perm:str):
+    def check_perm(user:dict=Depends(current_user())):
+        role="admin" if user["is_admin"] else "user"
+        if perm not in ROLE_PERMISSIONS.get(role,set()):
+            raise HTTPException(status_code=403,detail="Permission denied")
+        return user
+    return check_perm
+
+
 @app.exception_handler(Exception)
 async def handle_error(request: Request, exc: Exception):
     return HTMLResponse("<pre>" + traceback.format_exc() + "</pre>", status_code=500)
@@ -290,24 +305,27 @@ def current_user(request: Request):
         raise HTTPException(status_code=400, detail="User not found")
     return dict(user)
 
+
 @app.get("/invoices/{invoice_id}")
-def invoice(invoice_id: int,user:dict = Depends(current_user)):
-    conn=db()
+def invoice(invoice_id: int, user: dict = Depends(current_user)):
+    conn = db()
     try:
-        row = conn.execute("SELECT * FROM invoices WHERE id = ? AND owner_id = ?", (invoice_id,user["id"])).fetchone()
+        row = conn.execute("SELECT * FROM invoices WHERE id = ? AND owner_id = ?", (invoice_id, user["id"])).fetchone()
     finally:
         conn.close()
     if row is None:
-        raise HTTPException(status_code=404,detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found")
     return dict(row)
 
 
 @app.get("/admin/users")
 def admin_users(request: Request):
-    if "user_id" not in request.session:
-        return JSONResponse({"error": "login required"}, status_code=401)
-    rows = db().execute("SELECT id, username, is_admin FROM users").fetchall()
-    return [dict(r) for r in rows]
+    conn = db()
+    try:
+        rows = conn.execute("SELECT id, username, is_admin FROM users").fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
 
 
 @app.delete("/users/{user_id}")

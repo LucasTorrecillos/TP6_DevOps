@@ -32,7 +32,7 @@ from argon2 import PasswordHasher
 from argon2.low_level import Type
 from argon2.exceptions import VerificationError, InvalidHashError
 
-SECRET_KEY = "super-secret-key-123"
+SECRET_KEY = os.environ["SECRET_KEY"]
 DB_PATH = os.environ.get("DB_PATH", "shop.db")
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
 AWS_KEY = "AKIAIOSFODNN7EXAMPLE"

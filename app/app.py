@@ -4,7 +4,6 @@ Ne jamais déployer ce code tel quel. Votre mission : le rendre conforme.
 Documentation interactive : http://localhost:5000/docs
 """
 import ast
-import hashlib
 import html
 import ipaddress
 import logging
@@ -54,10 +53,6 @@ def db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
-
-
-def md5(value):
-    return hashlib.md5(value.encode()).hexdigest()
 
 
 ph = PasswordHasher(type=Type.ID)
@@ -164,7 +159,7 @@ def login(request: Request, data: dict = Body(...)):
 
 @app.get("/search")
 def search(q: str = ""):
-    sql = f"SELECT id, name, price FROM products WHERE name LIKE ?"
+    sql = "SELECT id, name, price FROM products WHERE name LIKE ?"
     conn = db()
     try:
         rows = conn.execute(sql, (f"%{q}%",)).fetchall()

@@ -72,7 +72,7 @@ ph = PasswordHasher(type=Type.ID)
 async def security_header(request: Request, call_next):
     response = await call_next(request)
     response.headers["Content-Security-Policy"] = (
-        "default-src 'self';"
+        "default-src 'self'; "
         "object-src 'none'; "
         "base-uri 'self'; "
         "frame-ancestors 'none'"
@@ -316,6 +316,11 @@ def fetch(url: str):
         r.raise_for_status()
     except requests.RequestException:
         raise HTTPException(status_code=502, detail="Request error")
+    if parsed.hostname not in ALLOWED_HOSTS:
+        raise HTTPException(
+            status_code=400,
+            detail="Unauthorized host"
+        )
     return PlainTextResponse(r.text[:500])
 
 

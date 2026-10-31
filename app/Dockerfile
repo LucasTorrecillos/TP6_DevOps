@@ -1,5 +1,5 @@
 # Versioning
-FROM python:3.12-slim
+FROM python:3.15-slim
 
 # Config
 ENV PYTHONDONTWRITEBYTECODE=1

@@ -99,7 +99,7 @@ ROLE_PERMISSIONS = {
 
 
 def require(perm:str):
-    def check_perm(user:dict=Depends(current_user())):
+    def check_perm(user:dict=Depends(current_user)):
         role="admin" if user["is_admin"] else "user"
         if perm not in ROLE_PERMISSIONS.get(role,set()):
             raise HTTPException(status_code=403,detail="Permission denied")
@@ -294,7 +294,7 @@ def fetch(url: str):
 def current_user(request: Request):
     user_id = request.session.get("user_id")
     if user_id is None:
-        raise HTTPException(status_code=400, detail="Login required")
+        raise HTTPException(status_code=401, detail="Login required")
     conn = db()
     try:
         user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
@@ -319,7 +319,7 @@ def invoice(invoice_id: int, user: dict = Depends(current_user)):
 
 
 @app.get("/admin/users")
-def admin_users(request: Request):
+def admin_users(users: dict = Depends(require("user:list"))):
     conn = db()
     try:
         rows = conn.execute("SELECT id, username, is_admin FROM users").fetchall()
@@ -329,13 +329,18 @@ def admin_users(request: Request):
 
 
 @app.delete("/users/{user_id}")
-def delete_user(user_id: int, request: Request):
-    if "user_id" not in request.session:
-        return JSONResponse({"error": "login required"}, status_code=401)
+def delete_user(
+        user_id: int,
+        user: dict = Depends(require("user:delete"))):
     conn = db()
-    conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
-    conn.commit()
-    return {"deleted": user_id}
+    try:
+        result = conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        conn.commit()
+        if result.rowcount == 0:
+            raise HTTPException(status_code=404, detail="User not found")
+        return {"deleted":user_id}
+    finally:
+        conn.close()
 
 
 @app.get("/boom")

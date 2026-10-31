@@ -25,6 +25,7 @@ from fastapi import HTTPException
 import ast
 import operator
 from pydantic import BaseModel, Field, ConfigDict
+from pathlib import Path
 
 SECRET_KEY = "super-secret-key-123"
 DB_PATH = os.environ.get("DB_PATH", "shop.db")
@@ -139,7 +140,14 @@ def hello(name: str = ""):
 
 @app.get("/files/{name:path}")
 def get_file(name: str):
-    return FileResponse(os.path.join(UPLOAD_DIR, name))
+    root = Path(UPLOAD_DIR).resolve()
+    file_path = (root / name).resolve()
+
+    if not file_path.is_relative_to(root):
+        raise HTTPException(status_code=403,detail="Unauthorized access")
+    if not file_path.is_file():
+        raise HTTPException(status_code=404,detail="File not found")
+    return FileResponse(file_path)
 
 
 def safe_eval(expr):

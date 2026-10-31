@@ -245,7 +245,7 @@ def safe_eval(expr):
 @app.post("/calc")
 def calc(data: dict = Body(...)):
     try:
-        result = safe_eval(data)
+        result = safe_eval(data["expr"])
         return {"result": str(result)}
     except (ValueError, SyntaxError, ArithmeticError, KeyError, TypeError):
         raise HTTPException(status_code=400, detail="Invalid expression")
@@ -290,7 +290,7 @@ def fetch(url: str):
         port = parsed.port
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid URL")
-    if parsed.scheme != "http":
+    if parsed.scheme != "https":
         raise HTTPException(status_code=400, detail="Invalid URL, HTTPS required")
     if port not in (None, 443):
         raise HTTPException(status_code=400, detail="Unauthorized port")
